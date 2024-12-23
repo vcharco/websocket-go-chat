@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+	<html lang="en">
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<title>Chat</title>
+		<style>
+			body { font-family: Arial, sans-serif; margin: 0; padding: 0; }
+			.container { max-width: 600px; margin: 20px auto; padding: 10px; border: 1px solid #ccc; border-radius: 5px; }
+			#messages { height: 300px; overflow-y: scroll; border: 1px solid #ddd; margin-bottom: 10px; padding: 5px; }
+			input, button { padding: 10px; font-size: 16px; }
+			#messageInput { width: 400px; }
+			#header-container { display: flex; align-items: center; justify-content: space-between; }
+		</style>
+	</head>
+	<body>
+		<div class="container">
+			<div id="header-container">
+				<h1>Chat</h1>
+				<label for="usernameInput">
+					Nombre de usuario&nbsp;
+					<input id="usernameInput" type="text" placeholder="Nombre de usuario...">
+				</label>
+			</div>
+			<div id="messages"></div>
+			<input id="messageInput" type="text" placeholder="Escribe un mensaje...">
+			<button onclick="sendMessage()">Enviar</button>
+		</div>
+		<script>
+			let ws;
+
+			function connectWebSocket() {
+				ws = new WebSocket("ws://" + window.location.host + "/ws");
+				const messagesDiv = document.getElementById("messages");
+
+				// Recibir mensajes del servidor
+				ws.onmessage = function(event) {
+					const message = document.createElement("div");
+					message.textContent = event.data;
+					messagesDiv.appendChild(message);
+					messagesDiv.scrollTop = messagesDiv.scrollHeight;
+				};
+
+				// Manejar errores
+				ws.onerror = function(error) {
+					console.error("WebSocket error:", error);
+				};
+
+				// Manejar cierre de la conexión
+				ws.onclose = function() {
+					console.warn("WebSocket cerrado. Reconectando...");
+					setTimeout(connectWebSocket, 1000); // Intentar reconectar en 1 segundo
+				};
+			}
+
+			connectWebSocket(); // Iniciar conexión
+
+			// Enviar mensaje al servidor
+			function sendMessage() {
+				const username = document.getElementById("usernameInput").value || "Unknown";
+				const input = document.getElementById("messageInput");
+				if (input.value && ws.readyState === WebSocket.OPEN) {
+					ws.send(username + ": " + input.value);
+					input.value = "";
+				} else if (ws.readyState !== WebSocket.OPEN) {
+					console.warn("WebSocket no está abierto. Intentando reconectar...");
+					connectWebSocket();
+				}
+			}
+		</script>
+	</body>
+	</html>
